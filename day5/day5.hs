@@ -3,6 +3,7 @@
 import qualified Data.Map as Map
 import Data.List.Split (splitOn)
 import Data.Tuple (swap)
+import Data.List (sortBy)
 
 readPairs :: String -> [(Int, Int)]
 readPairs =
@@ -31,11 +32,17 @@ getMiddle :: [a] -> a
 getMiddle xs = xs !! (length xs `div` 2)
 
 
+sortByMap :: Map.Map (Int, Int) Ordering -> [Int] -> [Int]
+sortByMap orderingMap = sortBy (\a b -> Map.findWithDefault EQ (a, b) orderingMap)
+
 main :: IO ()
 main = do
     contents <- getContents
     let [orders, lists] = splitOn "\n\n" contents
         orderingMap = makeOrderingMap orders
         lists' = map (map read . splitOn ",") (lines lists) :: [[Int]]
-        sortedLists = filter (isSorted orderingMap) lists'
-    print $ sum $ map getMiddle sortedLists
+        -- sortedLists = filter (isSorted orderingMap) lists'
+        unsortedLists = filter (not . isSorted orderingMap) lists'
+        resortedLists = map (sortByMap orderingMap) unsortedLists
+    print $ sum $ map getMiddle resortedLists
+    -- print resortedLists
