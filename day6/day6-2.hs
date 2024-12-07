@@ -1,5 +1,6 @@
 import Direction (Direction(..), turnRight, delta)
 import Grid (inBounds, get2D, find2D, set2D, index2D)
+import qualified Data.Set as Set
 
 type Grid = [[Char]]
 type Pos = (Int, Int)
@@ -21,11 +22,11 @@ moveInDir (x, y) dir =
     in (x + dx, y + dy)
 
 getReachablePosAndDirs :: PosDir -> Grid -> [PosDir] -> [PosDir]
-getReachablePosAndDirs posDir grid running =
+getReachablePosAndDirs posDir grid visited =
     let maybeNext = nextPos posDir grid
     in case maybeNext of
-        Just next -> next : running
-        Nothing -> running
+        Just next -> getReachablePosAndDirs next grid (next : visited)
+        Nothing -> visited
 
 isLoop :: PosDir -> Grid -> [PosDir] -> Bool
 isLoop posDir grid visited =
@@ -51,9 +52,12 @@ main :: IO ()
 main = do
     contents <- getContents
     let grid = lines contents
+        gridIndices = index2D grid
         maybeStart = find2D grid '^'
         startPosDir = case maybeStart of
             Just start -> (start, Up)
             Nothing -> error "No starting position found"
-        gridIndices = index2D grid
-    print $ length $ filter (changingPointMakesLoop startPosDir grid) gridIndices
+        reachablePosDirs = getReachablePosAndDirs startPosDir grid []
+        allPos = Set.fromList $ map fst reachablePosDirs
+        allPosButStart = Set.delete (fst startPosDir) allPos
+    print $ length $ filter (changingPointMakesLoop startPosDir grid) (Set.toList allPosButStart)
