@@ -4,7 +4,8 @@ module Grid (
     set2D,
     addIndex,
     addIndex2D,
-    find2D
+    find2D,
+    index2D
 ) where
 
 import Data.List (find)
@@ -35,6 +36,9 @@ addIndex2D grid =
     in map packIndex gridWithRowAndColIndex
     where packIndex :: (Int, [(Int, a)]) -> [((Int, Int), a)]
           packIndex (rowIndex, row) = map (\(colIndex, elem) -> ((colIndex, rowIndex), elem)) row
+
+index2D :: [[a]] -> [(Int, Int)]
+index2D grid = [(x, y) | y <- [0..length grid - 1], x <- [0..length (head grid) - 1]]
 
 find2D :: Eq a => [[a]] -> a -> Maybe (Int, Int)
 find2D grid val =
