@@ -1,14 +1,5 @@
-fun main(args: Array<String>) {
-    if (args.isNotEmpty() && args.size == 2 && args[0] == "--part") {
-        val input = generateSequence(::readLine).joinToString("\n")
-        when (args[1]) {
-            "1" -> part1(input)
-            "2" -> part2(input)
-            else -> println("Invalid part number. Use 1 or 2.")
-        }
-    } else {
-        println("Usage: --part <1|2>")
-    }
+data class Point(val x: Int, val y: Int) {
+    operator fun plus(other: Point) = Point(x + other.x, y + other.y)
 }
 
 // Button A: X+94, Y+34
@@ -30,4 +21,17 @@ fun part1(input: String) {
 }
 
 fun part2(input: String) {
+}
+
+fun main(args: Array<String>) {
+    if (args.isNotEmpty() && args.size == 2 && args[0] == "--part") {
+        val input = generateSequence(::readLine).joinToString("\n")
+        when (args[1]) {
+            "1" -> part1(input)
+            "2" -> part2(input)
+            else -> println("Invalid part number. Use 1 or 2.")
+        }
+    } else {
+        println("Usage: --part <1|2>")
+    }
 }

@@ -25,3 +25,7 @@ kotlin {
 application {
     mainClass.set("MainKt")
 }
+
+val run by tasks.getting(JavaExec::class) {
+    standardInput = System.`in`
+}
