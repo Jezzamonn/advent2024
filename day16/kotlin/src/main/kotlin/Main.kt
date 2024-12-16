@@ -112,13 +112,13 @@ data class PointDir(val point: Point, val direction: Direction) {
     }
 }
 
-data class SearchState(val pointDir: PointDir, val cost: Int) {
+data class SearchState(val pointDir: PointDir, val cost: Int, val previous: SearchState? = null) {
 
     fun nextStates(grid: Grid): List<SearchState> {
         return listOf(
-            SearchState(pointDir.moveForward(), cost + 1),
-            SearchState(pointDir.turnLeft(), cost + 1000),
-            SearchState(pointDir.turnRight(), cost + 1000)
+            SearchState(pointDir.moveForward(), cost + 1, this),
+            SearchState(pointDir.turnLeft(), cost + 1000, this),
+            SearchState(pointDir.turnRight(), cost + 1000, this)
         ).filter { grid.inBounds(it.pointDir.point) && grid.get(it.pointDir.point) != '#' }
     }
 }
@@ -188,7 +188,7 @@ fun printAnimationFrame(grid: Grid, visited: Set<PointDir>, current: PointDir) {
 
             if (point == current.point) {
                 print("${yellow}@")
-            } else if (visited.contains(PointDir(point, current.direction))) {
+            } else if (numVisited > 0) {
                 print("$green$numVisited")
             } else {
                 when (char) {
@@ -202,8 +202,42 @@ fun printAnimationFrame(grid: Grid, visited: Set<PointDir>, current: PointDir) {
     }
     println()
 
-    // Sleep for 100ms
     Thread.sleep(100)
+}
+
+fun printInBestPath(grid: Grid, inBestPath: Set<Point>) {
+    // Clear console
+    print("\u001b[H\u001b[2J")
+
+    // Print with colors
+    // Wall = white
+    // Empty = grey
+    // InBestPath = yellow
+    val white = "\u001b[37m"
+    val grey = "\u001b[90m"
+    val yellow = "\u001b[33m"
+
+    for (y in 0..<grid.height) {
+        for (x in 0..<grid.width) {
+
+            // Also, for visited, print the number of directions visited
+            val point = Point(x, y)
+
+            val char = grid.get(point)!!
+
+            if (inBestPath.contains(point)) {
+                print("${yellow}O")
+            } else {
+                when (char) {
+                    '#' -> print("$white$char")
+                    '.' -> print("$grey$char")
+                    else -> print(char)
+                }
+            }
+        }
+        println()
+    }
+    println()
 }
 
 fun part2() {
@@ -217,22 +251,64 @@ fun part2() {
     val priorityQueue = PriorityQueue<SearchState> { a, b -> a.cost - b.cost }
     priorityQueue.add(SearchState(PointDir(start, Direction.LEFT), 0))
 
-    val visited = mutableSetOf<PointDir>()
+    var bestCost: Int? = null
+    val bestScore = mutableMapOf<PointDir, Int>()
+    val previous = mutableMapOf<PointDir, MutableList<PointDir?>>()
+
     while (priorityQueue.isNotEmpty()) {
         val current = priorityQueue.remove()
-        if (visited.contains(current.pointDir)) {
-            continue
+        if (bestScore.contains(current.pointDir)) {
+            if (current.cost > bestScore[current.pointDir]!!) {
+                continue
+            }
+            previous[current.pointDir]!!.add(current.previous?.pointDir)
         }
-        visited.add(current.pointDir)
+        else {
+            bestScore[current.pointDir] = current.cost
+            previous[current.pointDir] = mutableListOf(current.previous?.pointDir)
+        }
+
+//        printAnimationFrame(grid, bestScore.keys, current.pointDir)
+
+        if (current.cost > (bestCost ?: Int.MAX_VALUE)) {
+            break
+        }
 
         if (current.pointDir.point == end) {
-            println(current.cost)
-            return
+            if (bestCost == null) {
+                bestCost = current.cost
+            }
+            continue
         }
 
         for (next in current.nextStates(grid)) {
             priorityQueue.add(next)
         }
     }
-    throw IllegalStateException("No path found")
+
+    // Count tiles in any best path
+    val inBestPath = mutableSetOf<Point>()
+    val toVisit = Direction.entries.map { PointDir(end, it) }.toMutableList()
+    val visited = mutableSetOf<PointDir>()
+    while (toVisit.isNotEmpty()) {
+//        printInBestPath(grid, inBestPath)
+
+        val current = toVisit.removeLast()
+        visited.add(current)
+//        println(toVisit.size)
+
+        // Sleep for 100ms
+//        Thread.sleep(50)
+
+        inBestPath.add(current.point)
+
+        for (next in previous[current] ?: emptyList()) {
+            if (next != null && !visited.contains(next)) {
+                toVisit.add(next)
+            }
+        }
+    }
+
+    printInBestPath(grid, inBestPath)
+    println(inBestPath.size)
 }
