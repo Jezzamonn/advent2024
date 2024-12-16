@@ -57,7 +57,7 @@ data class Grid(val grid: List<MutableList<Char>>) {
         return grid.withIndex().sumOf { (y, row) ->
             row.withIndex().sumOf { (x, char) ->
                 when (char) {
-                    'O' -> 100 * y + x
+                    'O', '[' -> 100 * y + x
                     else -> 0
                 }
             }
@@ -132,37 +132,118 @@ fun part1() {
     instructionLoop@ for (instruction in instructions) {
         val direction = directionOf(instruction) ?: continue
 
-        // Scan until we find a free space. Blocks mean we continue, wall means we break and don't move.
-        var endOfPush = robotPos.move(direction)
-        while (true) {
-            val nextChar = grid.get(endOfPush)
-            when (nextChar) {
-                '#' -> continue@instructionLoop
-                '.' -> break
-                null -> break
-            }
-            endOfPush = endOfPush.move(direction)
-        }
-        // Now go backwards and move tiles.
-        while (endOfPush != robotPos) {
-            val prevPos = endOfPush.move(direction.opposite())
-            grid.set(endOfPush, grid.get(prevPos)!!)
-            endOfPush = prevPos
-        }
-        grid.set(robotPos, '.')
-        robotPos = robotPos.move(direction)
+        robotPos = moveAndPushSimple(grid, robotPos, direction)
 
-//        // Clear terminal
-//        print("\u001b[H\u001b[2J")
-//        println(grid.toStringWithColors())
-//        println("Last instruction: $instruction")
-//        // Sleep so we can see it
-//        Thread.sleep(50)
+        //printAnimationFrame(grid, instruction)
     }
 
     println("Score: ${grid.score()}")
 }
 
 fun part2() {
+    val input = generateSequence(::readLine).joinToString("\n")
+
+    val (gridStr, instructions) = input.split("\n\n")
+    // double the grid
+    val grid2 = gridStr.map { when (it) {
+        '#' -> "##"
+        'O' -> "[]"
+        '.' -> ".."
+        '@' -> "@."
+        else -> it
+    }}.joinToString("")
+    val grid = gridOf(grid2)
+
+    var robotPos = grid.find('@')
+    instructionLoop@ for (instruction in instructions) {
+        val direction = directionOf(instruction) ?: continue
+
+        robotPos = when (direction) {
+            Direction.LEFT, Direction.RIGHT -> moveAndPushSimple(grid, robotPos, direction)
+            else -> {
+                moveAndPushVertical(grid, robotPos, direction)
+            }
+        }
+
+//        printAnimationFrame(grid, instruction)
+    }
+
+    println("Score: ${grid.score()}")
+}
+
+fun printAnimationFrame(grid: Grid, instruction: Char) {
+    // Clear terminal
+    print("\u001b[H\u001b[2J")
+    println(grid.toStringWithColors())
+    println("Last instruction: $instruction")
+    // Sleep so we can see it
+    Thread.sleep(50)
+}
+
+fun moveAndPushSimple(grid: Grid, start: Point, direction: Direction): Point {
+    // Scan until we find a free space. Blocks mean we continue, wall means we break and don't move.
+    var endOfPush = start.move(direction)
+    while (true) {
+        val nextChar = grid.get(endOfPush)
+        when (nextChar) {
+            '#', null -> return start
+            '.' -> break
+        }
+        endOfPush = endOfPush.move(direction)
+    }
+    // Now go backwards and move tiles.
+    while (endOfPush != start) {
+        val prevPos = endOfPush.move(direction.opposite())
+        grid.set(endOfPush, grid.get(prevPos)!!)
+        endOfPush = prevPos
+    }
+    grid.set(start, '.')
+    return start.move(direction)
+}
+
+fun moveAndPushVertical(grid: Grid, start: Point, direction: Direction): Point {
+    // Scan until we find a free space. Blocks mean we continue, wall means we break and don't move.
+    val delta = direction.delta()
+    var layer = mutableSetOf(start)
+
+    val toPushList = mutableListOf<Point>()
+    val toPushSet = mutableSetOf<Point>()
+
+    fun addToPush(point: Point) {
+        if (point !in toPushSet) {
+            toPushList.add(point)
+            toPushSet.add(point)
+        }
+    }
+
+    while (layer.isNotEmpty()) {
+        val nextLayer = mutableSetOf<Point>()
+        for (toPushPoint in layer) {
+            val toPushChar = grid.get(toPushPoint)
+            val linkedPoints = when (toPushChar) {
+                '#', null -> return start // Can't be pushed
+                '[' -> listOf(toPushPoint, toPushPoint + Point(1, 0))
+                ']' -> listOf(toPushPoint, toPushPoint + Point(-1, 0))
+                '@' -> listOf(toPushPoint)
+                else -> listOf()
+            }
+
+            for (linkedPoint in linkedPoints) {
+                addToPush(linkedPoint)
+                nextLayer.add(linkedPoint + delta)
+            }
+        }
+        layer = nextLayer
+    }
+
+    // We found all the points to push... now to push them.
+    // Go backwards by layer
+    for (toPushPoint in toPushList.reversed()) {
+        val cur = grid.get(toPushPoint)!!
+        grid.set(toPushPoint, '.')
+        grid.set(toPushPoint.plus(delta), cur)
+    }
+
+    return start.move(direction)
 }
 
