@@ -32,22 +32,28 @@ enum class Instruction {
     }
 }
 
-fun part1() {
-    val input = generateSequence (::readLine).joinToString("\n")
-    val (aStr, bStr, cStr, programStr) = pattern.toRegex().matchEntire(input)!!.destructured
+class ProgramState(var a: Int, var b: Int, var c: Int, var instructionPointer: Int, val program: List<Int>, val out: MutableList<Int>) {
 
-    var a = aStr.toInt()
-    var b = bStr.toInt()
-    var c = cStr.toInt()
-    val program = programStr.split(",").map { it[0] - '0' }
+    fun newProgram(): ProgramState {
+        return ProgramState(a, b, c, 0, program, mutableListOf())
+    }
 
-    var instructionPointer = 0
+    companion object {
+        fun fromInput(input: String): ProgramState {
+            val (aStr, bStr, cStr, programStr) = pattern.toRegex().matchEntire(input)!!.destructured
 
-    val out = mutableListOf<Int>()
+            val a = aStr.toInt()
+            val b = bStr.toInt()
+            val c = cStr.toInt()
+            val program = programStr.split(",").map { it[0] - '0' }
 
-    while (true) {
+            return ProgramState(a, b, c, 0, program, mutableListOf())
+        }
+    }
+
+    fun step(): Boolean {
         if (instructionPointer !in program.indices) {
-            break
+            return false
         }
         val instruction = Instruction.fromInt(program[instructionPointer])
         val literalOperand = program[instructionPointer + 1]
@@ -59,17 +65,17 @@ fun part1() {
             else -> null
         }
 
-        // Clear console
-        print("\u001b[H\u001b[2J")
-        println("""
-            A: $a
-            B: $b
-            C: $c
-            Instruction: $instruction
-            Literal Operand: $literalOperand
-            Combo Operand: $comboOperand
-            Out: $out
-        """.trimIndent())
+//        // Clear console
+//        print("\u001b[H\u001b[2J")
+//        println("""
+//            A: $a
+//            B: $b
+//            C: $c
+//            Instruction: $instruction
+//            Literal Operand: $literalOperand
+//            Combo Operand: $comboOperand
+//            Out: $out
+//        """.trimIndent())
 
         when (instruction) {
             Instruction.ADV -> {
@@ -101,9 +107,79 @@ fun part1() {
         }
 
         instructionPointer += 2
-    }
 
-    println(out.joinToString(","))
+        return true
+    }
 }
 
-fun part2() {}
+fun part1() {
+    val input = generateSequence (::readLine).joinToString("\n")
+
+    val state = ProgramState.fromInput(input)
+
+    while (state.step()) {}
+
+    println(state.out.joinToString(","))
+}
+
+fun part2() {
+    val input = generateSequence (::readLine).joinToString("\n")
+
+    val baseState = ProgramState.fromInput(input)
+
+    var i = 0
+    while (true) {
+        val state = baseState.newProgram()
+        state.a = i
+
+        if (i % 1000000 == 0) {
+            println(i)
+        }
+
+        var lastOutLen = 0
+
+        while (state.step()) {
+            // Early terminations:
+            // If out is too big:
+            if (state.out.size > baseState.program.size) {
+                break
+            }
+
+            if (state.out.size > lastOutLen) {
+                lastOutLen = state.out.size
+
+                // If out doesn't match the start of the program:
+                for ((outIndex, out) in state.out.withIndex()) {
+                    if (baseState.program[outIndex] != out) {
+                        break
+                    }
+                }
+            }
+        }
+
+        // Check if state.out = baseState.program
+        if (state.out == baseState.program) {
+            println(i)
+            return
+        }
+
+
+//            if (state.out.size > baseState.program.size) {
+//                break
+//            }
+//
+//            for ((outIndex, out) in state.out.withIndex()) {
+//                if (baseState.program[outIndex] != out) {
+//                    break
+//                }
+//            }
+//
+//            if (state.out.size == baseState.program.size) {
+//                println(i)
+//                return
+//            }
+//        }
+        i++
+    }
+
+}
