@@ -32,7 +32,14 @@ enum class Instruction {
     }
 }
 
-class ProgramState(var a: Int, var b: Int, var c: Int, var instructionPointer: Int, val program: List<Int>, val out: MutableList<Int>) {
+class ProgramState(
+    var a: Int,
+    var b: Int,
+    var c: Int,
+    var instructionPointer: Int,
+    val program: List<Int>,
+    val out: MutableList<Int>
+) {
 
     fun newProgram(): ProgramState {
         return ProgramState(a, b, c, 0, program, mutableListOf())
@@ -57,7 +64,7 @@ class ProgramState(var a: Int, var b: Int, var c: Int, var instructionPointer: I
         }
         val instruction = Instruction.fromInt(program[instructionPointer])
         val literalOperand = program[instructionPointer + 1]
-        val comboOperand = when(literalOperand) {
+        val comboOperand = when (literalOperand) {
             0, 1, 2, 3 -> literalOperand
             4 -> a
             5 -> b
@@ -81,26 +88,33 @@ class ProgramState(var a: Int, var b: Int, var c: Int, var instructionPointer: I
             Instruction.ADV -> {
                 a = a / (1 shl comboOperand!!)
             }
+
             Instruction.BXL -> {
                 b = b xor literalOperand
             }
+
             Instruction.BST -> {
                 b = comboOperand!! and 0b111
             }
+
             Instruction.JNZ -> {
                 if (a != 0) {
                     instructionPointer = literalOperand - 2
                 }
             }
+
             Instruction.BXC -> {
                 b = b xor c
             }
+
             Instruction.OUT -> {
                 out.add(comboOperand!! and 0b111)
             }
+
             Instruction.BDV -> {
                 b = a / (1 shl comboOperand!!)
             }
+
             Instruction.CDV -> {
                 c = a / (1 shl comboOperand!!)
             }
@@ -113,32 +127,32 @@ class ProgramState(var a: Int, var b: Int, var c: Int, var instructionPointer: I
 }
 
 fun part1() {
-    val input = generateSequence (::readLine).joinToString("\n")
+    val input = generateSequence(::readLine).joinToString("\n")
 
     val state = ProgramState.fromInput(input)
 
-    while (state.step()) {}
+    while (state.step()) {
+    }
 
     println(state.out.joinToString(","))
 }
 
 fun part2() {
-    val input = generateSequence (::readLine).joinToString("\n")
+    val input = generateSequence(::readLine).joinToString("\n")
 
     val baseState = ProgramState.fromInput(input)
 
-    var i = 0
-    while (true) {
+    var bestMatchingLen = 0
+
+    val matchingAtLeast6 = mutableListOf<Int>()
+
+    startingValueLoop@ for (i in generateSequence(0) { it + 1 }) {
         val state = baseState.newProgram()
         state.a = i
 
-        if (i % 1000000 == 0) {
-            println(i)
-        }
-
         var lastOutLen = 0
 
-        while (state.step()) {
+        computeLoop@ while (state.step()) {
             // Early terminations:
             // If out is too big:
             if (state.out.size > baseState.program.size) {
@@ -151,35 +165,36 @@ fun part2() {
                 // If out doesn't match the start of the program:
                 for ((outIndex, out) in state.out.withIndex()) {
                     if (baseState.program[outIndex] != out) {
-                        break
+                        if (outIndex >= 6) {
+                            matchingAtLeast6.add(i)
+                            println("$i: $outIndex")
+                        }
+                        if (outIndex > bestMatchingLen) {
+                            bestMatchingLen = outIndex
+                            println("Best matching len: $bestMatchingLen")
+                        }
+                        continue@startingValueLoop
                     }
                 }
             }
         }
+
+        if (matchingAtLeast6.size >= 30) {
+            // Print diffs
+            matchingAtLeast6.zipWithNext().forEach { (a, b) ->
+                println("Diff: ${b - a}")
+            }
+            break
+        }
+
 
         // Check if state.out = baseState.program
         if (state.out == baseState.program) {
             println(i)
             return
         }
-
-
-//            if (state.out.size > baseState.program.size) {
-//                break
-//            }
-//
-//            for ((outIndex, out) in state.out.withIndex()) {
-//                if (baseState.program[outIndex] != out) {
-//                    break
-//                }
-//            }
-//
-//            if (state.out.size == baseState.program.size) {
-//                println(i)
-//                return
-//            }
-//        }
-        i++
     }
+
+
 
 }
