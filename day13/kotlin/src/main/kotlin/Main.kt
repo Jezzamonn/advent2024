@@ -1,5 +1,13 @@
-data class Point(val x: Int, val y: Int) {
+import kotlin.math.sqrt
+
+data class Point(val x: Double, val y: Double) {
     operator fun plus(other: Point) = Point(x + other.x, y + other.y)
+
+    fun dot(other: Point) = x * other.x + y * other.y
+
+    fun normalized() = Point(x / length, y / length)
+
+    val length get() = sqrt(x * x + y * y)
 }
 
 // Button A: X+94, Y+34
