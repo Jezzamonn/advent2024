@@ -4,7 +4,7 @@
 *build/
 *.hi
 *.o
-input.txt
+input*.txt
 
 
 dist

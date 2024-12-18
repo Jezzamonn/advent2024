@@ -142,59 +142,31 @@ fun part2() {
 
     val baseState = ProgramState.fromInput(input)
 
-    var bestMatchingLen = 0
-
-    val matchingAtLeast6 = mutableListOf<Int>()
-
-    startingValueLoop@ for (i in generateSequence(0) { it + 1 }) {
+    val smallestAValueGivingOutput = mutableMapOf<Int, Int>()
+    for (i in 0..<(1 shl 3)) {
         val state = baseState.newProgram()
         state.a = i
+        while (state.step()) {}
 
-        var lastOutLen = 0
+        val out = state.out[0]
 
-        computeLoop@ while (state.step()) {
-            // Early terminations:
-            // If out is too big:
-            if (state.out.size > baseState.program.size) {
-                break
-            }
-
-            if (state.out.size > lastOutLen) {
-                lastOutLen = state.out.size
-
-                // If out doesn't match the start of the program:
-                for ((outIndex, out) in state.out.withIndex()) {
-                    if (baseState.program[outIndex] != out) {
-                        if (outIndex >= 6) {
-                            matchingAtLeast6.add(i)
-                            println("$i: $outIndex")
-                        }
-                        if (outIndex > bestMatchingLen) {
-                            bestMatchingLen = outIndex
-                            println("Best matching len: $bestMatchingLen")
-                        }
-                        continue@startingValueLoop
-                    }
-                }
-            }
-        }
-
-        if (matchingAtLeast6.size >= 30) {
-            // Print diffs
-            matchingAtLeast6.zipWithNext().forEach { (a, b) ->
-                println("Diff: ${b - a}")
-            }
-            break
-        }
-
-
-        // Check if state.out = baseState.program
-        if (state.out == baseState.program) {
-            println(i)
-            return
+        if (!smallestAValueGivingOutput.containsKey(out)) {
+            smallestAValueGivingOutput[out] = i
         }
     }
 
+    // Create the input that would create the program as output
+    val requiredA = baseState.program
+        .map { it -> smallestAValueGivingOutput[it]!! }
+        // Combine each 8 bit value by shifting
+        .reduce { acc, i -> (acc shl 3) or i }
 
+    println("A value = $requiredA")
 
+    val state = baseState.newProgram()
+    state.a = requiredA
+    while (state.step()) {}
+
+    println("Program = ${state.program}")
+    println("Out = ${state.out}")
 }
