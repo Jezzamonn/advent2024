@@ -33,9 +33,9 @@ enum class Instruction {
 }
 
 class ProgramState(
-    var a: Int,
-    var b: Int,
-    var c: Int,
+    var a: Long,
+    var b: Long,
+    var c: Long,
     var instructionPointer: Int,
     val program: List<Int>,
     val out: MutableList<Int>
@@ -49,9 +49,9 @@ class ProgramState(
         fun fromInput(input: String): ProgramState {
             val (aStr, bStr, cStr, programStr) = pattern.toRegex().matchEntire(input)!!.destructured
 
-            val a = aStr.toInt()
-            val b = bStr.toInt()
-            val c = cStr.toInt()
+            val a = aStr.toLong()
+            val b = bStr.toLong()
+            val c = cStr.toLong()
             val program = programStr.split(",").map { it[0] - '0' }
 
             return ProgramState(a, b, c, 0, program, mutableListOf())
@@ -64,11 +64,11 @@ class ProgramState(
         }
         val instruction = Instruction.fromInt(program[instructionPointer])
         val literalOperand = program[instructionPointer + 1]
-        val comboOperand = when (literalOperand) {
+        val comboOperand: Int? = when (literalOperand) {
             0, 1, 2, 3 -> literalOperand
-            4 -> a
-            5 -> b
-            6 -> c
+            4 -> a.toInt()
+            5 -> b.toInt()
+            6 -> c.toInt()
             else -> null
         }
 
@@ -86,19 +86,19 @@ class ProgramState(
 
         when (instruction) {
             Instruction.ADV -> {
-                a = a / (1 shl comboOperand!!)
+                a = a / (1L shl comboOperand!!)
             }
 
             Instruction.BXL -> {
-                b = b xor literalOperand
+                b = b xor literalOperand.toLong()
             }
 
             Instruction.BST -> {
-                b = comboOperand!! and 0b111
+                b = (comboOperand!! and 0b111).toLong()
             }
 
             Instruction.JNZ -> {
-                if (a != 0) {
+                if (a != 0L) {
                     instructionPointer = literalOperand - 2
                 }
             }
@@ -142,31 +142,29 @@ fun part2() {
 
     val baseState = ProgramState.fromInput(input)
 
-    val smallestAValueGivingOutput = mutableMapOf<Int, Int>()
-    for (i in 0..<(1 shl 3)) {
-        val state = baseState.newProgram()
-        state.a = i
-        while (state.step()) {}
+    var runningAValue = 0L;
+    for (programChar in baseState.program.reversed()) {
+        for (i in 0..<(1 shl 3)) {
+            val state = baseState.newProgram()
+            state.a = (runningAValue shl 3) or i.toLong()
+            while (state.step()) {}
 
-        val out = state.out[0]
-
-        if (!smallestAValueGivingOutput.containsKey(out)) {
-            smallestAValueGivingOutput[out] = i
+            val firstOut = state.out[0]
+            if (firstOut == programChar) {
+                runningAValue = (runningAValue shl 3) or i.toLong()
+                println(state.out)
+                break
+            }
         }
     }
 
-    // Create the input that would create the program as output
-    val requiredA = baseState.program
-        .map { it -> smallestAValueGivingOutput[it]!! }
-        // Combine each 8 bit value by shifting
-        .reduce { acc, i -> (acc shl 3) or i }
+    println("A value = $runningAValue")
 
-    println("A value = $requiredA")
-
+    // Test that it works?
     val state = baseState.newProgram()
-    state.a = requiredA
+    state.a = runningAValue
     while (state.step()) {}
 
     println("Program = ${state.program}")
-    println("Out = ${state.out}")
+    println("Out     = ${state.out}")
 }
