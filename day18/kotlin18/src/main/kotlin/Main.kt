@@ -107,5 +107,41 @@ fun part1() {
     }
 }
 
+fun canReachEnd(grid: Grid<Boolean>): Boolean {
+    val start = Point(0, 0)
+    val end = Point(size - 1, size - 1)
 
-fun part2() {}
+    val queue = PriorityQueue<SearchState>(compareBy { it.cost })
+    queue.add(SearchState(start, 0))
+    val visited = mutableSetOf<Point>()
+
+    while (queue.isNotEmpty()) {
+        val state = queue.remove()
+        if (state.point == end) {
+            return true
+        }
+        if (visited.contains(state.point)) {
+            continue
+        }
+        visited.add(state.point)
+        queue.addAll(state.nextStates(grid))
+    }
+    return false
+}
+
+
+fun part2() {
+    val grid = Grid.ofSize(size, size, false)
+
+    val input = generateSequence(::readLine).map { it.split(",").map { num -> num.toInt() } }.toList()
+    for ((i, p) in input.withIndex()) {
+        println(i)
+        val (x, y) = p
+        grid.set(Point(x, y), true)
+
+        if (!canReachEnd(grid)) {
+            println("$x,$y")
+            return
+        }
+    }
+}
